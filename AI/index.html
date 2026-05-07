@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Lens AI</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #111418;
+      --muted: #5f6874;
+      --line: #dfe3df;
+      --line2: #ecefec;
+      --green: #19714b;
+      --green2: #e9f3ed;
+      --red: #b83a2f;
+      --red2: #f6e8e5;
+      --blue: #17395f;
+      --blue2: #e8eef6;
+      --gold: #8a6d17;
+      --gold2: #f7efd9;
+      --shadow: 0 1px 2px rgba(17,20,24,.05), 0 12px 26px -22px rgba(17,20,24,.35);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
+    .sidebar { background: #0f1216; color: #d9dde2; padding: 18px 14px; display: flex; flex-direction: column; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; border-bottom: 1px solid #222832; }
+    .mark { width: 34px; height: 34px; border-radius: 50%; background: #f5f7f2; position: relative; overflow: hidden; }
+    .mark:before, .mark:after { content: ""; position: absolute; width: 12px; height: 12px; background: #a8c76b; top: 11px; }
+    .mark:before { left: 7px; }
+    .mark:after { right: 7px; box-shadow: -12px 12px 0 #a8c76b, 12px 12px 0 #a8c76b; }
+    .brand b { display: block; font-size: 16px; }
+    .brand span { display: block; color: #9ca4ae; font-size: 12px; }
+    .navlabel { color: #828b96; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; padding: 6px 10px; }
+    .nav { display: grid; gap: 5px; }
+    .nav button {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #c8ced5;
+      padding: 10px;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav button.active { background: #1f2630; color: #fff; }
+    .tag { font-size: 10px; color: #9fb5d1; background: #182f4d; padding: 2px 6px; border-radius: 999px; }
+    .sidefoot { margin-top: auto; color: #9ca4ae; font-size: 12px; border-top: 1px solid #222832; padding: 14px 8px 0; }
+
+    .main { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+    .topbar {
+      height: 66px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .topbar h1 { margin: 0 16px 0 0; font-size: 18px; white-space: nowrap; }
+    .field { display: grid; gap: 3px; }
+    .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .field input, .field select, .field textarea {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      min-height: 34px;
+      padding: 7px 9px;
+      outline: none;
+    }
+    .ticker { width: 96px; text-transform: uppercase; font-weight: 700; }
+    .company { width: 240px; }
+    .grow { flex: 1; }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 6px;
+      min-height: 34px;
+      padding: 7px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      box-shadow: 0 1px 0 rgba(17,20,24,.03);
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn.small { min-height: 29px; padding: 5px 9px; font-size: 12px; }
+    .content { padding: 20px; min-width: 0; }
+    .pagehead { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 14px; }
+    .pagehead h2 { margin: 0; font-size: 24px; letter-spacing: 0; }
+    .sub { color: var(--muted); margin-top: 4px; max-width: 850px; }
+
+    .grid { display: grid; gap: 14px; }
+    .cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .panel.pad { padding: 14px; }
+    .panel h3 { margin: 0 0 10px; font-size: 15px; }
+    .metric { display: grid; gap: 5px; }
+    .metric span { color: var(--muted); font-size: 12px; }
+    .metric b { font-size: 18px; }
+    .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .bull { color: var(--green); background: var(--green2); }
+    .bear { color: var(--red); background: var(--red2); }
+    .neutral { color: #555; background: #eeeeea; }
+    .warn { color: var(--gold); background: var(--gold2); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line2); vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; background: #fbfcfa; }
+    tr:last-child td { border-bottom: 0; }
+    .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .list li { padding: 9px; background: #fbfcfa; border: 1px solid var(--line2); border-radius: 6px; }
+    .brief { min-height: 150px; border: 1px solid var(--line); background: #fbfcfa; border-radius: 6px; padding: 12px; white-space: pre-wrap; line-height: 1.5; }
+    .promptbox { width: 100%; min-height: 230px; resize: vertical; line-height: 1.45; }
+    .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tabsurface { display: none; }
+    .tabsurface.active { display: block; }
+    .split { display: grid; grid-template-columns: 380px 1fr; gap: 14px; }
+    .checkgrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .checkgrid label { display: flex; align-items: center; gap: 7px; background: #fbfcfa; border: 1px solid var(--line2); border-radius: 6px; padding: 8px; }
+    .sourcecard { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line2); border-radius: 6px; background: #fbfcfa; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .toast { position: fixed; right: 18px; bottom: 18px; background: #111418; color: white; border-radius: 8px; padding: 11px 13px; opacity: 0; transform: translateY(8px); transition: .2s; z-index: 5; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1050px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: sticky; top: 0; z-index: 3; display: block; padding: 10px; }
+      .brand, .sidefoot, .navlabel { display: none; }
+      .nav { display: flex; overflow-x: auto; }
+      .nav button { white-space: nowrap; }
+      .topbar { flex-wrap: wrap; height: auto; }
+      .content { padding: 14px; }
+      .cols2, .cols3, .cols4, .split { grid-template-columns: 1fr; }
+      .company { width: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark"></div>
+        <div><b>Market Lens AI</b><span>SimpleStocks research desk</span></div>
+      </div>
+      <div class="navlabel">Workbook</div>
+      <nav class="nav" id="nav">
+        <button class="active" data-tab="dashboard">Dashboard</button>
+        <button data-tab="deepdive">Deep Dive <span class="tag">PRO</span></button>
+        <button data-tab="launcher">Prompt Launcher</button>
+        <button data-tab="sources">Source Pull <span class="tag">BYOK</span></button>
+        <button data-tab="industry">Industry + Competitors</button>
+        <button data-tab="watchlist">Watchlist</button>
+        <button data-tab="notes">Positions + Notes</button>
+        <button data-tab="settings">Settings</button>
+      </nav>
+      <div class="sidefoot">Pitch mockup. Local only. No API calls.</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <h1>Market Lens AI</h1>
+        <div class="field"><label>Ticker</label><input class="ticker" id="ticker" value="SMCI"></div>
+        <div class="field"><label>Company</label><input class="company" id="company" value="Super Micro Computer"></div>
+        <div class="field"><label>Depth</label><select id="depth"><option>Quick</option><option>Standard</option><option selected>Deep Dive</option><option>Obsessive</option></select></div>
+        <div class="field"><label>Horizon</label><select id="horizon"><option>Weeks</option><option selected>Months</option><option>Years</option></select></div>
+        <div class="grow"></div>
+        <button class="btn primary" id="runTop">Run Research</button>
+        <button class="btn green" id="saveTop">Save to Workbook</button>
+      </header>
+
+      <section class="content">
+        <div class="tabsurface active" id="dashboard">
+          <div class="pagehead">
+            <div>
+              <h2>Ticker Research Dashboard</h2>
+              <div class="sub">One ticker turns into a research brief, prompt pack, source feed, competitor map, and next action list.</div>
+            </div>
+            <span class="pill warn">Draft brief pending</span>
+          </div>
+          <div class="grid cols4">
+            <div class="panel pad metric"><span>Sector</span><b>Information Technology</b></div>
+            <div class="panel pad metric"><span>Industry</span><b>AI Server Systems</b></div>
+            <div class="panel pad metric"><span>Market Cap</span><b>$48.2B</b></div>
+            <div class="panel pad metric"><span>Next Action</span><b>May 12 review</b></div>
+          </div>
+          <div class="grid cols3" style="margin-top:14px">
+            <div class="panel pad">
+              <h3>Bull Case</h3>
+              <ul class="list">
+                <li>Direct-liquid-cooled AI racks keep backlog elevated.</li>
+                <li>Customer demand tied to Nvidia systems remains strong.</li>
+                <li>Margin recovery is the upside lever if component pricing improves.</li>
+              </ul>
+            </div>
+            <div class="panel pad">
+              <h3>Bear Case</h3>
+              <ul class="list">
+                <li>Low margins versus Dell and HPE leave little room for mistakes.</li>
+                <li>Customer concentration makes revenue quality harder to trust.</li>
+                <li>Accounting and auditor questions remain a valuation overhang.</li>
+              </ul>
+            </div>
+            <div class="panel pad">
+              <h3>What Changed Recently</h3>
+              <ul class="list">
+                <li>10-K filed late with no material restatement in this mock dataset.</li>
+                <li>Short-seller narrative cooled but did not disappear.</li>
+                <li>Peer group keeps improving AI server disclosures.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="deepdive">
+          <div class="pagehead">
+            <div>
+              <h2>Deep Dive</h2>
+              <div class="sub">Research notebook for the weird stuff: industry position, strongest bull, strongest bear, hidden risks, narrative shifts, and the final decision brief.</div>
+            </div>
+            <button class="btn primary" data-prompt="Full Deep Dive">Generate Full Brief</button>
+          </div>
+          <div class="split">
+            <div class="panel pad">
+              <h3>Research Controls</h3>
+              <div class="grid">
+                <div class="field"><label>Research question</label><textarea id="question" rows="4">Is this a real AI infrastructure winner or a low-margin hardware assembler riding the Nvidia wave?</textarea></div>
+                <div class="field"><label>Investor type</label><select id="investor"><option>Conservative</option><option selected>Growth</option><option>Speculative</option><option>Income</option></select></div>
+                <div class="toolbar">
+                  <button class="btn small" data-prompt="Hidden Risks">Hidden Risks</button>
+                  <button class="btn small" data-prompt="Biggest Bull">Biggest Bull</button>
+                  <button class="btn small" data-prompt="Biggest Bear">Biggest Bear</button>
+                  <button class="btn small" data-prompt="Debate">Build Debate</button>
+                  <button class="btn small" data-prompt="Thesis Breaker">Thesis Breaker</button>
+                </div>
+              </div>
+            </div>
+            <div class="panel pad">
+              <h3>Decision Brief Preview</h3>
+              <div class="brief" id="brief">SMCI deep dive brief:
+
+The company is positioned as a challenger in AI server systems. The key question is not whether demand exists. The key question is whether the company can convert demand into durable margins, clean accounting, and defensible customer relationships.
+
+Most important follow-up:
+1. Compare gross margin trend to Dell and HPE.
+2. Check customer concentration language in filings.
+3. Pull bearish articles and short reports, then separate old noise from current risk.
+4. Track whether Nvidia allocation strengthens or weakens.</div>
+            </div>
+          </div>
+          <div class="grid cols3" style="margin-top:14px">
+            <div class="panel pad"><h3>Biggest Bull</h3><p>AI rack demand is real and SMCI has speed, supplier access, and a liquid-cooling edge.</p></div>
+            <div class="panel pad"><h3>Biggest Bear</h3><p>The business may be structurally low-margin with accounting baggage and customer concentration.</p></div>
+            <div class="panel pad"><h3>Weird / Overlooked</h3><p>Search for technical blogs, vendor notes, litigation, supplier concentration, related-party issues, and obscure filing language.</p></div>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="launcher">
+          <div class="pagehead">
+            <div>
+              <h2>Prompt Launcher</h2>
+              <div class="sub">Pick the task. The app builds the prompt with ticker, company, horizon, and research question. Copy it or open it in ChatGPT.</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn" id="copyPrompt">Copy Prompt</button>
+              <button class="btn primary" id="openChatGPT">Open in ChatGPT</button>
+            </div>
+          </div>
+          <div class="grid cols3">
+            <div class="panel pad">
+              <h3>Research Actions</h3>
+              <div class="grid">
+                <button class="btn" data-prompt="Full Deep Dive">Deep Dive</button>
+                <button class="btn" data-prompt="Industry Map">Industry Map</button>
+                <button class="btn" data-prompt="Competitor Ranking">Competitor Ranking</button>
+                <button class="btn" data-prompt="Hidden Risks">Hidden Risks</button>
+                <button class="btn" data-prompt="Biggest Bull">Biggest Bull</button>
+                <button class="btn" data-prompt="Biggest Bear">Biggest Bear</button>
+                <button class="btn" data-prompt="Debate">Bull vs Bear Debate</button>
+                <button class="btn" data-prompt="Narrative Shift">Narrative Shift</button>
+                <button class="btn" data-prompt="Final Decision Brief">Final Decision Brief</button>
+              </div>
+            </div>
+            <div class="panel pad" style="grid-column:span 2">
+              <h3>Generated Prompt</h3>
+              <textarea class="promptbox" id="promptText"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="sources">
+          <div class="pagehead">
+            <div>
+              <h2>Source Pull</h2>
+              <div class="sub">Pull selected feeds into a ticker page. Free sources first. X/Twitter is designed as bring-your-own-key because official access is not clean/free.</div>
+            </div>
+            <button class="btn primary" id="pullNow">Pull Latest</button>
+          </div>
+          <div class="grid cols3">
+            <div class="panel pad">
+              <h3>Pull Setup</h3>
+              <div class="grid">
+                <div class="field"><label>Keyword filter</label><input id="keyword" value="AI servers accounting Nvidia"></div>
+                <div class="field"><label>Source type</label><select><option>Yahoo Finance RSS</option><option>Google News RSS</option><option>Alpha Vantage News Sentiment</option><option>Custom RSS</option><option>X/Twitter BYOK</option></select></div>
+                <div class="field"><label>Pull interval</label><select><option>Manual</option><option>5 minutes</option><option selected>10 minutes</option><option>15 minutes</option></select></div>
+                <div class="field"><label>Handle or feed URL</label><input value="@zerohedge or https://finance.yahoo.com/rss/headline?s=SMCI"></div>
+              </div>
+            </div>
+            <div class="panel pad">
+              <h3>Tracked Sources</h3>
+              <div class="grid">
+                <div class="sourcecard"><b>Yahoo Finance</b><span class="pill bull">Active</span></div>
+                <div class="sourcecard"><b>Google News RSS</b><span class="pill bull">Active</span></div>
+                <div class="sourcecard"><b>Alpha Vantage</b><span class="pill warn">API key</span></div>
+                <div class="sourcecard"><b>@zerohedge via X API</b><span class="pill warn">BYOK</span></div>
+              </div>
+            </div>
+            <div class="panel pad">
+              <h3>Saved Routing</h3>
+              <ul class="list">
+                <li>Save headline to ticker notes.</li>
+                <li>Attach link to Deep Dive.</li>
+                <li>Mark sentiment: bullish, bearish, neutral.</li>
+                <li>Create next action if headline matters.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:14px; overflow:auto">
+            <table id="feedTable">
+              <thead><tr><th>Time</th><th>Source</th><th>Ticker</th><th>Headline / Post</th><th>Sentiment</th><th>Why It Matters</th><th>Action</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="industry">
+          <div class="pagehead">
+            <div>
+              <h2>Industry + Competitors</h2>
+              <div class="sub">Show where the company ranks against peers by growth, margins, valuation, performance, and narrative strength.</div>
+            </div>
+          </div>
+          <div class="grid cols4">
+            <div class="panel pad metric"><span>Position</span><b>Challenger</b></div>
+            <div class="panel pad metric"><span>Leader</span><b>Dell</b></div>
+            <div class="panel pad metric"><span>Niche Player</span><b>HPE</b></div>
+            <div class="panel pad metric"><span>Vulnerable</span><b>Lenovo</b></div>
+          </div>
+          <div class="panel" style="margin-top:14px; overflow:auto">
+            <table>
+              <thead><tr><th>Company</th><th>Ticker</th><th>Market Cap</th><th>Growth</th><th>Margins</th><th>Valuation</th><th>Strength vs This Ticker</th><th>Weakness vs This Ticker</th></tr></thead>
+              <tbody>
+                <tr><td>Dell Technologies</td><td>DELL</td><td>$108B</td><td>+23%</td><td>22.9%</td><td>15x FY26</td><td>Channel and financing arm</td><td>Slower liquid-cooling ramp</td></tr>
+                <tr><td>HPE</td><td>HPE</td><td>$28B</td><td>+9%</td><td>33.1%</td><td>11x FY26</td><td>HPC heritage</td><td>Lower AI system share</td></tr>
+                <tr><td>Lenovo</td><td>992.HK</td><td>$18B</td><td>+11%</td><td>17.4%</td><td>9x FY26</td><td>Cost and supply chain</td><td>Limited US federal access</td></tr>
+                <tr><td>Foxconn</td><td>2317.TW</td><td>$84B</td><td>+19%</td><td>6.1%</td><td>12x FY26</td><td>ODM scale</td><td>Brand-less margin profile</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="watchlist">
+          <div class="pagehead"><div><h2>Watchlist</h2><div class="sub">Ticker, thesis, priority, next action, and notes saved to the workbook.</div></div><button class="btn primary">Add Ticker</button></div>
+          <div class="panel" style="overflow:auto">
+            <table>
+              <thead><tr><th>Ticker</th><th>Company</th><th>Category</th><th>Reason Watching</th><th>Bias</th><th>Priority</th><th>Next Action</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>SMCI</td><td>Super Micro</td><td>Deep dive</td><td>AI server demand vs accounting risk</td><td>Mixed</td><td>High</td><td>May 12</td><td>Compare to Dell margins.</td></tr>
+                <tr><td>NVDA</td><td>NVIDIA</td><td>Core watch</td><td>AI capex leader</td><td>Bullish</td><td>High</td><td>Pre-earnings</td><td>Watch ASIC threat.</td></tr>
+                <tr><td>AAPL</td><td>Apple</td><td>Long-term idea</td><td>Services + buyback</td><td>Neutral</td><td>Medium</td><td>Q3 earnings</td><td>EU risk matters.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="notes">
+          <div class="pagehead"><div><h2>Positions + Notes</h2><div class="sub">Decision organizer. Not a signal engine.</div></div></div>
+          <div class="grid cols2">
+            <div class="panel pad">
+              <h3>Position Note</h3>
+              <div class="grid">
+                <div class="field"><label>Position type</label><select><option>Watch only</option><option>Stock</option><option>ETF</option><option>Option</option><option>Spread</option></select></div>
+                <div class="field"><label>Thesis</label><textarea rows="5">Waiting for evidence that backlog converts into clean revenue and better margins.</textarea></div>
+                <div class="field"><label>Risk</label><textarea rows="4">Accounting overhang, customer concentration, low margin profile.</textarea></div>
+                <button class="btn primary">Save Note</button>
+              </div>
+            </div>
+            <div class="panel pad">
+              <h3>Next Actions</h3>
+              <ul class="list">
+                <li><b>May 12:</b> Review auditor and filing notes.</li>
+                <li><b>May 15:</b> Compare margins to Dell and HPE.</li>
+                <li><b>May 20:</b> Pull fresh headlines and bearish commentary.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabsurface" id="settings">
+          <div class="pagehead"><div><h2>Settings</h2><div class="sub">Pitch placeholders for the real build.</div></div></div>
+          <div class="grid cols2">
+            <div class="panel pad">
+              <h3>Workbook Storage</h3>
+              <div class="grid">
+                <div class="field"><label>Google Sheet ID</label><input value="Paste Sheet ID later"></div>
+                <div class="field"><label>Sheet tabs</label><input value="Research, DeepDive, Watchlist, Sources, Notes"></div>
+              </div>
+            </div>
+            <div class="panel pad">
+              <h3>API Keys</h3>
+              <div class="grid">
+                <div class="field"><label>Alpha Vantage</label><input value="Bring your own key"></div>
+                <div class="field"><label>OpenAI / Claude</label><input value="Prompt launcher first, API later"></div>
+                <div class="field"><label>X / Twitter</label><input value="Bring your own key"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const prompts = {
+      "Full Deep Dive": "Do a deep dive on {ticker} ({company}) for a {investor} investor with a {horizon} time horizon. Research the real business, industry structure, competitors, market rank, strongest bull case, strongest bear case, hidden risks, recent narrative shift, overlooked articles, and what would break the thesis. End with a clean decision brief: what matters, what is noise, what to watch next, and what would make me walk away. Research question: {question}",
+      "Industry Map": "Map the industry for {ticker} ({company}). Identify direct competitors, indirect competitors, suppliers, customers, substitutes, and market structure. Rank {ticker} as leader, challenger, niche player, or vulnerable incumbent. Explain what it wins on and where it is weak.",
+      "Competitor Ranking": "Compare {ticker} ({company}) to its top competitors using revenue growth, margins, market cap, valuation, balance sheet, stock performance, customer concentration, and narrative strength. Give me a ranked peer table and a plain-English conclusion.",
+      "Hidden Risks": "Find overlooked, non-obvious, or under-discussed risks for {ticker} ({company}). Look for lawsuits, supplier issues, customer concentration, accounting concerns, insider activity, regulatory risk, short reports, niche industry coverage, and technical blogs. Summarize what matters and why investors may be missing it.",
+      "Biggest Bull": "Find the strongest bullish argument for {ticker} ({company}). Identify who is making that argument, the evidence they use, the assumptions that must be true, and what would prove them wrong.",
+      "Biggest Bear": "Find the strongest bearish argument for {ticker} ({company}). Identify who is making that argument, the evidence they use, the assumptions that must be true, and what would prove them wrong.",
+      "Debate": "Create a debate between the strongest bull and strongest bear on {ticker} ({company}). Make both sides intelligent. No strawman arguments. End with the three facts that matter most.",
+      "Thesis Breaker": "I am considering owning or watching {ticker} ({company}). Attack the thesis. Find the weakest assumptions, hidden risks, crowded beliefs, valuation problems, business risks, and possible catalysts that could break the story.",
+      "Narrative Shift": "Summarize how the market narrative around {ticker} ({company}) changed over the last 3, 6, and 12 months. What used to matter? What matters now? What could matter next?",
+      "Final Decision Brief": "Turn the research on {ticker} ({company}) into a clean market decision brief: what matters, what is noise, what I need to watch next, what would make me interested, and what would make me walk away."
+    };
+
+    const sampleFeed = [
+      ["9:55 AM", "Yahoo Finance", "SMCI", "AI server makers trade higher after fresh liquid-cooling order chatter", "Bullish", "Supports demand story, but margins still need proof."],
+      ["9:41 AM", "Google News", "SMCI", "Analysts compare SMCI, Dell, and HPE exposure to Nvidia GB200 racks", "Neutral", "Peer comparison belongs in competitor tab."],
+      ["9:28 AM", "X / @zerohedge", "SMCI", "Server names active premarket as AI capex debate heats up", "Neutral", "Useful as narrative heat, not enough as evidence."],
+      ["9:12 AM", "Alpha Vantage", "SMCI", "News sentiment flags accounting-risk article as high relevance", "Bearish", "Route to hidden-risk section for review."]
+    ];
+
+    function ctx() {
+      return {
+        ticker: document.getElementById("ticker").value.trim().toUpperCase() || "SMCI",
+        company: document.getElementById("company").value.trim() || "the company",
+        depth: document.getElementById("depth").value,
+        horizon: document.getElementById("horizon").value.toLowerCase(),
+        investor: (document.getElementById("investor") || { value: "growth" }).value.toLowerCase(),
+        question: (document.getElementById("question") || { value: "" }).value.trim()
+      };
+    }
+
+    function buildPrompt(kind) {
+      const c = ctx();
+      const text = (prompts[kind] || prompts["Full Deep Dive"])
+        .replaceAll("{ticker}", c.ticker)
+        .replaceAll("{company}", c.company)
+        .replaceAll("{horizon}", c.horizon)
+        .replaceAll("{investor}", c.investor)
+        .replaceAll("{question}", c.question || "What should I know before putting money to work?");
+      const box = document.getElementById("promptText");
+      if (box) box.value = text;
+      toast(kind + " prompt ready");
+      return text;
+    }
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    function drawFeed() {
+      const tbody = document.querySelector("#feedTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = sampleFeed.map(row => {
+        const cls = row[4] === "Bullish" ? "bull" : row[4] === "Bearish" ? "bear" : "neutral";
+        return `<tr><td>${row[0]}</td><td>${row[1]}</td><td class="mono">${ctx().ticker}</td><td>${row[3]}</td><td><span class="pill ${cls}">${row[4]}</span></td><td>${row[5]}</td><td><button class="btn small">Save</button></td></tr>`;
+      }).join("");
+    }
+
+    document.getElementById("nav").addEventListener("click", event => {
+      const btn = event.target.closest("button[data-tab]");
+      if (!btn) return;
+      document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tabsurface").forEach(t => t.classList.remove("active"));
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    });
+
+    document.addEventListener("click", event => {
+      const promptBtn = event.target.closest("[data-prompt]");
+      if (promptBtn) buildPrompt(promptBtn.dataset.prompt);
+    });
+
+    document.getElementById("copyPrompt").addEventListener("click", async () => {
+      const text = document.getElementById("promptText").value || buildPrompt("Full Deep Dive");
+      try { await navigator.clipboard.writeText(text); toast("Prompt copied"); }
+      catch (_) { toast("Select the prompt text and copy"); }
+    });
+
+    document.getElementById("openChatGPT").addEventListener("click", () => {
+      const text = document.getElementById("promptText").value || buildPrompt("Full Deep Dive");
+      window.open("https://chatgpt.com/?q=" + encodeURIComponent(text), "_blank");
+    });
+
+    document.getElementById("runTop").addEventListener("click", () => {
+      buildPrompt("Full Deep Dive");
+      toast("Research mock run created");
+    });
+    document.getElementById("saveTop").addEventListener("click", () => toast("Saved to workbook mock"));
+    document.getElementById("pullNow").addEventListener("click", () => { drawFeed(); toast("Latest source pull loaded"); });
+    document.getElementById("ticker").addEventListener("input", drawFeed);
+    buildPrompt("Full Deep Dive");
+    drawFeed();
+  </script>
+</body>
+</html>
