@@ -68,20 +68,20 @@
   <main class="main">
     <header class="top">
       <h1>Market Lens AI</h1>
-      <div class="field"><label>Ticker</label><input class="ticker" id="ticker" value="SMCI"></div>
-      <div class="field"><label>Company</label><input class="company" id="company" value="Super Micro Computer"></div>
-      <div class="grow"></div>
+      <div class="field"><label>Ticker</label><input class="ticker" id="ticker" value="AAPL"></div>
+      <div class="field"><label>Company</label><input class="company" id="company" value="Apple Inc."></div>
       <button class="btn primary" id="runResearch">Top Line</button>
       <button class="btn" id="topDeepDive">Deep Dive</button>
       <button class="btn green" id="saveTicker">Save Ticker</button>
+      <div class="grow"></div>
     </header>
 
     <section class="content">
       <section class="tab active" id="dashboard">
         <div class="head"><div><h2>Research Dashboard</h2><div class="sub">Enter a ticker. Get the top-line read first. Use Deep Dive only when they want the full research pack.</div></div><span class="pill warn" id="apiStatus">API not tested</span></div>
         <div class="grid cols4">
-          <div class="panel pad metric"><span>Current ticker</span><b id="dashTicker">SMCI</b></div>
-          <div class="panel pad metric"><span>Company</span><b id="dashCompany">Super Micro Computer</b></div>
+          <div class="panel pad metric"><span>Current ticker</span><b id="dashTicker">AAPL</b></div>
+          <div class="panel pad metric"><span>Company</span><b id="dashCompany">Apple Inc.</b></div>
           <div class="panel pad metric"><span>Saved tickers</span><b id="dashWatchCount">0</b></div>
           <div class="panel pad metric"><span>Saved notes</span><b id="dashNoteCount">0</b></div>
         </div>
@@ -283,7 +283,7 @@ function setLoading(on, msg){
 }
 function context(){
   return {
-    ticker: ($("ticker").value || "SMCI").trim().toUpperCase(),
+    ticker: ($("ticker").value || "AAPL").trim().toUpperCase(),
     company: ($("company").value || "the company").trim(),
     question: (($("deepQuestion") || {}).value || $("researchQuestion").value || "What matters before putting money to work?").trim()
   };
