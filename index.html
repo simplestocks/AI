@@ -94,7 +94,8 @@
               <div class="grid">
                 <div class="field"><label>X / ticker logic</label><input id="frontFeedTicker" value="$AAPL OR AAPL"></div>
                 <div class="field"><label>Keyword logic</label><input id="frontFeedKeyword" value="earnings OR lawsuit"></div>
-                <button class="btn green" id="saveFrontFeed">Save Feed Filter</button>
+                <button class="btn green" id="pullFrontFeed">Pull Feed</button>
+                <ul class="list" id="frontFeedRows"></ul>
               </div>
             </div>
           </div>
@@ -238,7 +239,7 @@
 
 <script>
 const STORE_KEY = "marketLensAI.v1";
-const defaultState = { watchlist: [], notes: [], prompts: [], sources: [], feed: [], latestBrief: "" };
+const defaultState = { watchlist: [], notes: [], prompts: [], sources: [], feed: [], frontFeed: [], latestBrief: "" };
 const COMPANY_BY_TICKER = {
   AAPL:"Apple Inc.", MSFT:"Microsoft Corp.", NVDA:"NVIDIA Corp.", SMCI:"Super Micro Computer",
   TSLA:"Tesla, Inc.", META:"Meta Platforms", AMZN:"Amazon.com, Inc.", GOOGL:"Alphabet Inc.",
@@ -375,11 +376,37 @@ function savePrompt(text){
 function pullSampleFeed(){
   const c=context();
   state.feed=[
-    {id:1,time:"9:55 AM",source:"Yahoo Finance",ticker:c.ticker,headline:"AI server makers trade higher after fresh liquid-cooling order chatter",sent:"Bullish",why:"Supports demand story, but margins still need proof."},
-    {id:2,time:"9:41 AM",source:"Google News",ticker:c.ticker,headline:"Analysts compare " + c.ticker + " exposure against Dell and HPE",sent:"Neutral",why:"Peer comparison belongs in competitor review."},
-    {id:3,time:"9:28 AM",source:"X / tracked source",ticker:c.ticker,headline:"Narrative heat building around " + c.ticker + " into the open",sent:"Neutral",why:"Useful as market narrative, not evidence by itself."}
+    {id:1,time:"9:55 AM",source:"Yahoo Finance",ticker:c.ticker,headline:`${c.ticker} earnings chatter picks up as analysts revisit AI demand`,sent:"Bullish",why:"Matches ticker and earnings keyword. Useful for research, not a signal."},
+    {id:2,time:"9:41 AM",source:"Google News",ticker:c.ticker,headline:`${c.ticker} lawsuit and regulatory headlines draw investor attention`,sent:"Bearish",why:"Matches ticker and lawsuit keyword. Route to hidden risks."},
+    {id:3,time:"9:28 AM",source:"X.com / tracked source",ticker:c.ticker,headline:`$${c.ticker} mentioned in market stream as narrative heat builds`,sent:"Neutral",why:"Useful as market narrative, not evidence by itself."},
+    {id:4,time:"9:12 AM",source:"Alpha Vantage",ticker:c.ticker,headline:`${c.ticker} fundamentals update available from company overview data`,sent:"Neutral",why:"Good input for Top Line research."}
   ];
   saveState(); toast("Sample source feed loaded");
+}
+function pullFrontFeed(){
+  const c=context();
+  const tickerLogic=$("frontFeedTicker").value.trim() || c.ticker;
+  const keywordLogic=$("frontFeedKeyword").value.trim();
+  const tickers=parseLogicTerms(tickerLogic).map(t=>t.replace(/^\$/,"").toUpperCase());
+  const keywords=parseLogicTerms(keywordLogic).map(t=>t.toLowerCase());
+  const base=[
+    {id:Date.now()+1,time:"Now",source:"X.com",ticker:c.ticker,headline:`$${c.ticker} thread mentions earnings setup and market reaction`,sent:"Neutral",why:"Matched ticker logic and earnings keyword."},
+    {id:Date.now()+2,time:"Now",source:"Yahoo Finance",ticker:c.ticker,headline:`${c.company} latest news: earnings, analyst notes, and valuation context`,sent:"Neutral",why:"Matched company/ticker news query."},
+    {id:Date.now()+3,time:"Now",source:"Google News",ticker:c.ticker,headline:`${c.ticker} lawsuit risk and regulatory headlines to review`,sent:"Bearish",why:"Matched risk keyword. Save to hidden-risk notes if relevant."},
+    {id:Date.now()+4,time:"Now",source:"X.com",ticker:c.ticker,headline:`Traders discussing ${c.ticker} after fresh headline flow`,sent:"Neutral",why:"Matched ticker logic. Needs verification before acting."}
+  ];
+  state.frontFeed=base.filter(item=>{
+    const hay=(item.headline+" "+item.ticker).toLowerCase();
+    const tickerOk=!tickers.length || tickers.some(t=>hay.includes(t.toLowerCase()));
+    const keywordOk=!keywords.length || keywords.some(k=>hay.includes(k));
+    return tickerOk && keywordOk;
+  });
+  if(!state.frontFeed.length) state.frontFeed=base.slice(0,2).map(x=>({...x,why:"No exact sample match yet. Showing closest placeholder result."}));
+  saveState();
+  toast("Feed pulled");
+}
+function parseLogicTerms(value){
+  return String(value || "").split(/\s+OR\s+|,|\s+/i).map(x=>x.trim()).filter(x=>x && x.toUpperCase()!=="OR");
 }
 function renderDashboard(){
   const c=context();
@@ -399,6 +426,7 @@ function renderNotes(){
 function renderSources(){
   $("sourceRules").innerHTML=state.sources.length ? state.sources.map(s=>`<li><b>${s.source}</b>: ${escapeHtml(s.keyword)} <button class="btn small red" data-del-source="${s.id}">Delete</button></li>`).join("") : `<li>No source rules saved.</li>`;
   $("feedRows").innerHTML=state.feed.length ? state.feed.map(f=>`<tr><td>${f.time}</td><td>${f.source}</td><td class="mono">${f.ticker}</td><td>${escapeHtml(f.headline)}</td><td><span class="pill ${f.sent==="Bullish"?"bull":f.sent==="Bearish"?"bear":"neutral"}">${f.sent}</span></td><td>${escapeHtml(f.why)}</td><td><button class="btn small" data-save-feed="${f.id}">Save</button></td></tr>`).join("") : `<tr><td colspan="7" class="empty">No feed items yet.</td></tr>`;
+  $("frontFeedRows").innerHTML=state.frontFeed.length ? state.frontFeed.map(f=>`<li><div class="statusline"><b>${f.source}</b><span class="mono">${f.ticker}</span><span class="pill ${f.sent==="Bullish"?"bull":f.sent==="Bearish"?"bear":"neutral"}">${f.sent}</span><button class="btn small" data-save-front-feed="${f.id}">Save</button></div><div style="margin-top:6px">${escapeHtml(f.headline)}</div><div class="sub">${escapeHtml(f.why)}</div></li>`).join("") : `<li>No feed pulled yet.</li>`;
 }
 function renderAll(){ renderDashboard(); renderWatchlist(); renderNotes(); renderSources(); }
 function escapeHtml(s){ return String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
@@ -468,13 +496,14 @@ document.addEventListener("click",e=>{
   const done=e.target.closest("[data-done-note]"); if(done){ state.notes=state.notes.map(n=>String(n.id)===done.dataset.doneNote ? {...n,done:true} : n); saveState(); }
   const ds=e.target.closest("[data-del-source]"); if(ds){ state.sources=state.sources.filter(x=>String(x.id)!==ds.dataset.delSource); saveState(); }
   const sf=e.target.closest("[data-save-feed]"); if(sf){ const item=state.feed.find(x=>String(x.id)===sf.dataset.saveFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
+  const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
   const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
 });
 $("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch;
 $("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("addWatchMany").onclick=addWatchTickers; $("saveNote").onclick=()=>saveNote(); $("newNote").onclick=()=>resetNoteForm(); $("pullSample").onclick=pullSampleFeed;
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
-$("saveFrontFeed").onclick=()=>{ state.sources.unshift({id:Date.now(),source:"X.com",keyword:$("frontFeedTicker").value + " / " + $("frontFeedKeyword").value}); saveState(); toast("Front feed filter saved"); };
+$("pullFrontFeed").onclick=pullFrontFeed;
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("openDeepChatGPT").onclick=()=>openChatGPT($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("saveDeepPrompt").onclick=()=>savePrompt($("deepPrompt").value || buildPrompt("Full Deep Dive"));
