@@ -85,6 +85,11 @@
           <div class="panel pad metric"><span>Saved tickers</span><b id="dashWatchCount">0</b></div>
           <div class="panel pad metric"><span>Saved notes</span><b id="dashNoteCount">0</b></div>
         </div>
+        <div class="grid cols3" style="margin-top:14px">
+          <div class="panel pad metric"><span>Price</span><b id="snapPrice">Pulling...</b></div>
+          <div class="panel pad metric"><span>Trend</span><b id="snapTrend">Pulling...</b></div>
+          <div class="panel pad metric"><span>Options</span><b id="snapOptions">Checking...</b></div>
+        </div>
         <div class="grid dashgrid" style="margin-top:14px">
           <div class="grid">
             <div class="panel pad">
@@ -98,6 +103,10 @@
             <div class="panel pad"><h3>Latest Research Brief</h3><div class="brief formatted" id="latestBrief">Run research or generate a deep dive prompt.</div></div>
           </div>
           <div class="grid">
+            <div class="panel pad compactbox">
+              <h3>Technical Glance</h3>
+              <ul class="list" id="technicalList"><li>Pulling technicals...</li></ul>
+            </div>
             <div class="panel pad compactbox"><h3>Next Actions</h3><ul class="list" id="nextActionList"></ul></div>
             <div class="panel pad frontfeed">
               <h3>Front Feed Filter</h3>
@@ -254,7 +263,7 @@
 
 <script>
 const STORE_KEY = "marketLensAI.v1";
-const defaultState = { watchlist: [], notes: [], prompts: [], sources: [], feed: [], frontFeed: [], latestBrief: "" };
+const defaultState = { watchlist: [], notes: [], prompts: [], sources: [], feed: [], frontFeed: [], latestBrief: "", snapshot: null };
 const COMPANY_BY_TICKER = {
   AAPL:"Apple Inc.", MSFT:"Microsoft Corp.", NVDA:"NVIDIA Corp.", SMCI:"Super Micro Computer",
   TSLA:"Tesla, Inc.", META:"Meta Platforms", AMZN:"Amazon.com, Inc.", GOOGL:"Alphabet Inc.",
@@ -348,6 +357,25 @@ async function runResearch(){
     $("apiStatus").className="pill bear";
   } finally {
     setLoading(false);
+  }
+}
+async function loadMarketSnapshot(){
+  const c=context();
+  $("snapPrice").textContent="Pulling...";
+  $("snapTrend").textContent="Pulling...";
+  $("snapOptions").textContent="Checking...";
+  $("technicalList").innerHTML="<li>Pulling technicals...</li>";
+  try{
+    const url=`https://jazzy-starlight-0a9a95.netlify.app/.netlify/functions/market-snapshot?ticker=${encodeURIComponent(c.ticker)}`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error || "Snapshot failed");
+    state.snapshot=data;
+    if(data.company && data.company !== c.ticker) $("company").value=data.company;
+    saveState();
+  }catch(err){
+    state.snapshot={error:err.message};
+    renderSnapshot();
   }
 }
 function addWatch(){
@@ -452,6 +480,34 @@ function renderDashboard(){
   if(state.latestBrief) setHtml("latestBrief", state.latestBrief); else $("latestBrief").textContent="Run research or generate a deep dive prompt.";
   const actions=state.notes.filter(n=>(n.type==="Next Action" || n.type==="To Do") && !n.done).sort(sortByDate).slice(0,5);
   $("nextActionList").innerHTML=actions.length ? actions.map(n=>`<li><div class="statusline"><b>${n.ticker}</b><span class="pill neutral">${n.type}</span>${n.dueDate ? `<span>Due ${n.dueDate}</span>` : ""}<button class="btn small" data-open-note="${n.id}">Open</button></div><div style="margin-top:6px">${escapeHtml(n.text)}</div></li>`).join("") : `<li>No actions due.</li>`;
+  renderSnapshot();
+}
+function renderSnapshot(){
+  const s=state.snapshot;
+  if(!s || s.error){
+    $("snapPrice").textContent=s?.error ? "Unavailable" : "Pulling...";
+    $("snapTrend").textContent=s?.error ? "Unavailable" : "Pulling...";
+    $("snapOptions").textContent=s?.error ? "Unavailable" : "Checking...";
+    $("technicalList").innerHTML=`<li>${escapeHtml(s?.error || "Pulling technicals...")}</li>`;
+    return;
+  }
+  $("snapPrice").textContent=s.snapshot?.price ? `$${Number(s.snapshot.price).toFixed(2)}` : "N/A";
+  $("snapTrend").textContent=s.technical?.trend || "N/A";
+  $("snapOptions").textContent=s.options ? s.options.read : "N/A";
+  const rows=[
+    ["50-day SMA", s.technical?.sma50 ? `$${Number(s.technical.sma50).toFixed(2)}` : "N/A"],
+    ["200-day SMA", s.technical?.sma200 ? `$${Number(s.technical.sma200).toFixed(2)}` : "N/A"],
+    ["RSI 14", s.technical?.rsi14 ? Number(s.technical.rsi14).toFixed(1) : "N/A"],
+    ["Price vs 50-day", s.technical?.priceVs50 !== null && s.technical?.priceVs50 !== undefined ? `${s.technical.priceVs50.toFixed(1)}%` : "N/A"],
+    ["Price vs 200-day", s.technical?.priceVs200 !== null && s.technical?.priceVs200 !== undefined ? `${s.technical.priceVs200.toFixed(1)}%` : "N/A"],
+    ["Analyst target", s.snapshot?.analystTarget ? `$${Number(s.snapshot.analystTarget).toFixed(2)}` : "N/A"],
+    ["Market cap", s.snapshot?.marketCap || "N/A"]
+  ];
+  if(s.options){
+    rows.push(["Options exp.", s.options.expiration || "N/A"]);
+    rows.push(["Put/call vol", s.options.putCallVolumeRatio !== null ? Number(s.options.putCallVolumeRatio).toFixed(2) : "N/A"]);
+  }
+  $("technicalList").innerHTML=rows.map(([k,v])=>`<li><b>${k}:</b> ${v}</li>`).join("");
 }
 function renderWatchlist(){
   $("watchRows").innerHTML=state.watchlist.length ? state.watchlist.map(w=>`<tr><td class="mono">${w.ticker}</td><td>${escapeHtml(w.company)}</td><td>${w.category}</td><td>${w.bias}</td><td>${w.priority}</td><td>${escapeHtml(w.next)}</td><td>${escapeHtml(w.notes)}</td><td><button class="btn small red" data-del-watch="${w.id}">Delete</button></td></tr>`).join("") : `<tr><td colspan="8" class="empty">No saved tickers yet.</td></tr>`;
@@ -556,9 +612,11 @@ $("exportData").onclick=()=>{ $("settingsOut").textContent=JSON.stringify(state,
 $("clearData").onclick=()=>{ if(confirm("Clear local Market Lens AI data?")){ state={...defaultState}; saveState(); toast("Local data cleared"); } };
 $("noteFilter").onchange=renderNotes;
 $("ticker").addEventListener("input",()=>{ const t=$("ticker").value.trim().toUpperCase(); if(COMPANY_BY_TICKER[t]) $("company").value=COMPANY_BY_TICKER[t]; renderDashboard(); });
+$("ticker").addEventListener("change",loadMarketSnapshot);
 $("company").addEventListener("input",renderDashboard);
 buildPrompt("Top Line");
 renderAll();
+loadMarketSnapshot();
 </script>
 </body>
 </html>
