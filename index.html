@@ -405,6 +405,28 @@ function pullFrontFeed(){
   saveState();
   toast("Feed pulled");
 }
+async function pullLiveFrontFeed(){
+  const c=context();
+  const tickerTerms=parseLogicTerms($("frontFeedTicker").value || c.ticker).map(t=>t.replace(/^\$/,"").toUpperCase());
+  const ticker=tickerTerms.find(t=>/^[A-Z.]{1,8}$/.test(t)) || c.ticker;
+  const keyword=$("frontFeedKeyword").value.trim();
+  $("frontFeedRows").innerHTML=`<li class="loading">Pulling real headlines for ${ticker}...</li>`;
+  try{
+    const url=`https://jazzy-starlight-0a9a95.netlify.app/.netlify/functions/news-feed?ticker=${encodeURIComponent(ticker)}&keyword=${encodeURIComponent(keyword)}&limit=12`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error || "Feed request failed");
+    state.frontFeed=(data.items || []).map(item=>({...item,id:item.id || Date.now()+Math.random()}));
+    if(!state.frontFeed.length){
+      state.frontFeed=[{id:Date.now(),time:"Now",source:"Alpha Vantage",ticker,headline:"No matching headlines returned for that keyword filter.",sent:"Neutral",sentiment:"Neutral",why:"Try a broader keyword like earnings, lawsuit, guidance, AI, China, demand.",url:""}];
+    }
+    saveState();
+    toast("Live headlines pulled");
+  }catch(err){
+    $("frontFeedRows").innerHTML=`<li><b>Feed failed:</b> ${escapeHtml(err.message)}</li>`;
+    toast("Feed failed");
+  }
+}
 function parseLogicTerms(value){
   return String(value || "").split(/\s+OR\s+|,|\s+/i).map(x=>x.trim()).filter(x=>x && x.toUpperCase()!=="OR");
 }
@@ -426,7 +448,12 @@ function renderNotes(){
 function renderSources(){
   $("sourceRules").innerHTML=state.sources.length ? state.sources.map(s=>`<li><b>${s.source}</b>: ${escapeHtml(s.keyword)} <button class="btn small red" data-del-source="${s.id}">Delete</button></li>`).join("") : `<li>No source rules saved.</li>`;
   $("feedRows").innerHTML=state.feed.length ? state.feed.map(f=>`<tr><td>${f.time}</td><td>${f.source}</td><td class="mono">${f.ticker}</td><td>${escapeHtml(f.headline)}</td><td><span class="pill ${f.sent==="Bullish"?"bull":f.sent==="Bearish"?"bear":"neutral"}">${f.sent}</span></td><td>${escapeHtml(f.why)}</td><td><button class="btn small" data-save-feed="${f.id}">Save</button></td></tr>`).join("") : `<tr><td colspan="7" class="empty">No feed items yet.</td></tr>`;
-  $("frontFeedRows").innerHTML=state.frontFeed.length ? state.frontFeed.map(f=>`<li><div class="statusline"><b>${f.source}</b><span class="mono">${f.ticker}</span><span class="pill ${f.sent==="Bullish"?"bull":f.sent==="Bearish"?"bear":"neutral"}">${f.sent}</span><button class="btn small" data-save-front-feed="${f.id}">Save</button></div><div style="margin-top:6px">${escapeHtml(f.headline)}</div><div class="sub">${escapeHtml(f.why)}</div></li>`).join("") : `<li>No feed pulled yet.</li>`;
+  $("frontFeedRows").innerHTML=state.frontFeed.length ? state.frontFeed.map(f=>{
+    const sentiment=f.sentiment || f.sent || "Neutral";
+    const cls=sentiment==="Bullish"?"bull":sentiment==="Bearish"?"bear":"neutral";
+    const link=f.url ? `<a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">Open</a>` : "";
+    return `<li><div class="statusline"><b>${escapeHtml(f.source)}</b><span class="mono">${escapeHtml(f.ticker)}</span><span>${escapeHtml(f.time || "")}</span><span class="pill ${cls}">${escapeHtml(sentiment)}</span>${link}<button class="btn small" data-save-front-feed="${f.id}">Save</button></div><div style="margin-top:6px">${escapeHtml(f.headline)}</div><div class="sub">${escapeHtml(f.why || f.summary || "")}</div></li>`;
+  }).join("") : `<li>No feed pulled yet.</li>`;
 }
 function renderAll(){ renderDashboard(); renderWatchlist(); renderNotes(); renderSources(); }
 function escapeHtml(s){ return String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
@@ -496,14 +523,14 @@ document.addEventListener("click",e=>{
   const done=e.target.closest("[data-done-note]"); if(done){ state.notes=state.notes.map(n=>String(n.id)===done.dataset.doneNote ? {...n,done:true} : n); saveState(); }
   const ds=e.target.closest("[data-del-source]"); if(ds){ state.sources=state.sources.filter(x=>String(x.id)!==ds.dataset.delSource); saveState(); }
   const sf=e.target.closest("[data-save-feed]"); if(sf){ const item=state.feed.find(x=>String(x.id)===sf.dataset.saveFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
-  const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
+  const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + (item.url ? "\nLink: " + item.url : "") + "\nWhy it matters: " + (item.why || item.summary || "")); }
   const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
 });
 $("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch;
 $("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("addWatchMany").onclick=addWatchTickers; $("saveNote").onclick=()=>saveNote(); $("newNote").onclick=()=>resetNoteForm(); $("pullSample").onclick=pullSampleFeed;
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
-$("pullFrontFeed").onclick=pullFrontFeed;
+$("pullFrontFeed").onclick=pullLiveFrontFeed;
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("openDeepChatGPT").onclick=()=>openChatGPT($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("saveDeepPrompt").onclick=()=>savePrompt($("deepPrompt").value || buildPrompt("Full Deep Dive"));
