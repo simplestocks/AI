@@ -70,16 +70,15 @@
       <h1>Market Lens AI</h1>
       <div class="field"><label>Ticker</label><input class="ticker" id="ticker" value="SMCI"></div>
       <div class="field"><label>Company</label><input class="company" id="company" value="Super Micro Computer"></div>
-      <div class="field"><label>Depth</label><select id="depth"><option>Quick</option><option>Standard</option><option selected>Deep Dive</option></select></div>
-      <div class="field"><label>Horizon</label><select id="horizon"><option>Weeks</option><option selected>Months</option><option>Years</option></select></div>
       <div class="grow"></div>
-      <button class="btn primary" id="runResearch">Run Research</button>
+      <button class="btn primary" id="runResearch">Top Line</button>
+      <button class="btn" id="topDeepDive">Deep Dive</button>
       <button class="btn green" id="saveTicker">Save Ticker</button>
     </header>
 
     <section class="content">
       <section class="tab active" id="dashboard">
-        <div class="head"><div><h2>Research Dashboard</h2><div class="sub">Current ticker, saved thesis, recent generated brief, and next action.</div></div><span class="pill warn" id="apiStatus">API not tested</span></div>
+        <div class="head"><div><h2>Research Dashboard</h2><div class="sub">Enter a ticker. Get the top-line read first. Use Deep Dive only when they want the full research pack.</div></div><span class="pill warn" id="apiStatus">API not tested</span></div>
         <div class="grid cols4">
           <div class="panel pad metric"><span>Current ticker</span><b id="dashTicker">SMCI</b></div>
           <div class="panel pad metric"><span>Company</span><b id="dashCompany">Super Micro Computer</b></div>
@@ -93,12 +92,12 @@
       </section>
 
       <section class="tab" id="research">
-        <div class="head"><div><h2>Research</h2><div class="sub">Calls the existing Netlify stock-research function when available. Saves the result into this workbook.</div></div><button class="btn primary" id="runResearch2">Run Research</button></div>
+        <div class="head"><div><h2>Top Line</h2><div class="sub">One-click research summary. No extra decisions.</div></div><button class="btn primary" id="runResearch2">Top Line</button></div>
         <div class="grid cols2">
           <div class="panel pad">
             <h3>Research Inputs</h3>
             <div class="grid">
-              <div class="field"><label>Research question</label><textarea id="researchQuestion" rows="5">What matters most before putting money to work in this ticker?</textarea></div>
+              <div class="field"><label>Research question</label><textarea id="researchQuestion" rows="5">Give me the top-line read: what this company does, why the stock matters now, biggest bull case, biggest bear case, biggest risk, and what to watch next.</textarea></div>
               <div class="toolbar">
                 <button class="btn small" data-action="preset" data-kind="fundamentals">Fundamentals</button>
                 <button class="btn small" data-action="preset" data-kind="risks">Risks</button>
@@ -115,13 +114,12 @@
       </section>
 
       <section class="tab" id="deepdive">
-        <div class="head"><div><h2>Deep Dive</h2><div class="sub">Builds the full research brief: real business, industry, competitors, biggest bull, biggest bear, hidden risks, and decision brief.</div></div><button class="btn primary" data-prompt="Full Deep Dive">Generate Deep Dive Prompt</button></div>
+        <div class="head"><div><h2>Deep Dive</h2><div class="sub">Full research pack: business, industry, competitors, biggest bull, biggest bear, hidden risks, and final decision brief.</div></div><button class="btn primary" data-prompt="Full Deep Dive">Build Deep Dive</button></div>
         <div class="grid split">
           <div class="panel pad">
             <h3>Deep Dive Controls</h3>
             <div class="grid">
-              <div class="field"><label>Deep dive question</label><textarea id="deepQuestion" rows="5">Is this a real AI infrastructure winner or a low-margin hardware assembler riding the Nvidia wave?</textarea></div>
-              <div class="field"><label>Investor type</label><select id="investor"><option>Conservative</option><option selected>Growth</option><option>Speculative</option><option>Income</option></select></div>
+              <div class="field"><label>Deep dive question</label><textarea id="deepQuestion" rows="5">Do the full deep dive. Find the real business, competitors, hidden risks, strongest bull case, strongest bear case, weird overlooked articles, and final decision brief.</textarea></div>
               <div class="toolbar">
                 <button class="btn small" data-prompt="Hidden Risks">Hidden Risks</button>
                 <button class="btn small" data-prompt="Biggest Bull">Biggest Bull</button>
@@ -144,7 +142,7 @@
       </section>
 
       <section class="tab" id="launcher">
-        <div class="head"><div><h2>Prompt Launcher</h2><div class="sub">Reusable buttons that build complete prompts with the ticker, company, horizon, and current question.</div></div><button class="btn" id="copyLauncherPrompt">Copy Prompt</button></div>
+        <div class="head"><div><h2>Prompt Launcher</h2><div class="sub">Reusable buttons that build complete prompts with the ticker, company, and current question.</div></div><button class="btn" id="copyLauncherPrompt">Copy Prompt</button></div>
         <div class="grid cols3">
           <div class="panel pad">
             <h3>Prompt Buttons</h3>
@@ -207,7 +205,8 @@
 const STORE_KEY = "marketLensAI.v1";
 const defaultState = { watchlist: [], notes: [], prompts: [], sources: [], feed: [], latestBrief: "" };
 const prompts = {
-  "Full Deep Dive": "Do a deep dive on {ticker} ({company}) for a {investor} investor with a {horizon} time horizon. Research the real business, industry structure, competitors, market rank, strongest bull case, strongest bear case, hidden risks, recent narrative shift, overlooked articles, and what would break the thesis. End with a clean decision brief: what matters, what is noise, what to watch next, and what would make me walk away. Research question: {question}",
+    "Top Line": "Give me the top-line market research read on {ticker} ({company}). Keep it concise. Cover: what the company does, why the stock matters now, biggest bull case, biggest bear case, biggest risk, what changed recently, and what to watch next.",
+    "Full Deep Dive": "Do a deep dive on {ticker} ({company}). Research the real business, industry structure, competitors, market rank, strongest bull case, strongest bear case, hidden risks, recent narrative shift, overlooked articles, and what would break the thesis. End with a clean decision brief: what matters, what is noise, what to watch next, and what would make me walk away. Research question: {question}",
   "Industry Map": "Map the industry for {ticker} ({company}). Identify direct competitors, indirect competitors, suppliers, customers, substitutes, and market structure. Rank {ticker} as leader, challenger, niche player, or vulnerable incumbent. Explain what it wins on and where it is weak.",
   "Competitor Ranking": "Compare {ticker} ({company}) to its top competitors using revenue growth, margins, market cap, valuation, balance sheet, stock performance, customer concentration, and narrative strength. Give me a ranked peer table and a plain-English conclusion.",
   "Hidden Risks": "Find overlooked, non-obvious, or under-discussed risks for {ticker} ({company}). Look for lawsuits, supplier issues, customer concentration, accounting concerns, insider activity, regulatory risk, short reports, niche industry coverage, and technical blogs. Summarize what matters and why investors may be missing it.",
@@ -228,8 +227,6 @@ function context(){
   return {
     ticker: ($("ticker").value || "SMCI").trim().toUpperCase(),
     company: ($("company").value || "the company").trim(),
-    horizon: ($("horizon").value || "Months").toLowerCase(),
-    investor: (($("investor") || {}).value || "Growth").toLowerCase(),
     question: (($("deepQuestion") || {}).value || $("researchQuestion").value || "What matters before putting money to work?").trim()
   };
 }
@@ -237,7 +234,6 @@ function buildPrompt(kind){
   const c=context();
   const text=(prompts[kind] || prompts["Full Deep Dive"])
     .replaceAll("{ticker}", c.ticker).replaceAll("{company}", c.company)
-    .replaceAll("{horizon}", c.horizon).replaceAll("{investor}", c.investor)
     .replaceAll("{question}", c.question);
   if($("deepPrompt")) $("deepPrompt").value=text;
   if($("launcherPrompt")) $("launcherPrompt").value=text;
@@ -328,6 +324,7 @@ document.addEventListener("click",e=>{
   const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
 });
 $("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch;
+$("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("saveNote").onclick=()=>saveNote(); $("pullSample").onclick=pullSampleFeed;
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
@@ -339,7 +336,7 @@ $("saveLauncherPrompt").onclick=()=>savePrompt($("launcherPrompt").value || buil
 $("exportData").onclick=()=>{ $("settingsOut").textContent=JSON.stringify(state,null,2); copyText(JSON.stringify(state,null,2)); };
 $("clearData").onclick=()=>{ if(confirm("Clear local Market Lens AI data?")){ state={...defaultState}; saveState(); toast("Local data cleared"); } };
 ["ticker","company"].forEach(id=>$(id).addEventListener("input",renderDashboard));
-buildPrompt("Full Deep Dive");
+buildPrompt("Top Line");
 renderAll();
 </script>
 </body>
