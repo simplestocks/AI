@@ -93,12 +93,14 @@
         <div class="grid dashgrid" style="margin-top:14px">
           <div class="grid">
             <div class="panel pad">
-              <h3>Quick Actions</h3>
-              <div class="grid cols3">
-                <div class="quickcard"><b>Top Line</b><span>One-click AI research brief.</span><button class="btn primary" id="runResearchCard">Run Top Line</button></div>
-                <div class="quickcard"><b>Deep Dive</b><span>Full prompt pack for serious research.</span><button class="btn" id="topDeepDiveCard">Build Deep Dive</button></div>
-                <div class="quickcard"><b>Feed Pull</b><span>Live headlines with source links.</span><button class="btn green" id="pullFeedCard">Pull Feed</button></div>
+              <h3>Research</h3>
+              <div class="grid cols4">
+                <div class="quickcard"><b>Fundamentals</b><span>Business, revenue, margins, valuation.</span><button class="btn small" data-front-section="fundamentals">Open</button></div>
+                <div class="quickcard"><b>Risks</b><span>Bear case, hidden risks, thesis breakers.</span><button class="btn small" data-front-section="risks">Open</button></div>
+                <div class="quickcard"><b>Technicals</b><span>Trend, price, moving averages, RSI.</span><button class="btn small" data-front-section="technicals">Open</button></div>
+                <div class="quickcard"><b>Earnings</b><span>Earnings, guidance, recent changes.</span><button class="btn small" data-front-section="earnings">Open</button></div>
               </div>
+              <div class="brief formatted" id="frontSectionOutput" style="margin-top:12px">Select a research block above.</div>
             </div>
             <div class="panel pad"><h3>Latest Research Brief</h3><div class="brief formatted" id="latestBrief">Run research or generate a deep dive prompt.</div></div>
           </div>
@@ -127,10 +129,10 @@
       </section>
 
       <section class="tab" id="research">
-        <div class="head"><div><h2>Top Line</h2><div class="sub">One-click research summary. No extra decisions.</div></div><button class="btn primary" id="runResearch2">Top Line</button></div>
+        <div class="head"><div><h2>Research</h2><div class="sub">Top-line research controls and output.</div></div><button class="btn primary" id="runResearch2">Top Line</button></div>
         <div class="grid cols2">
           <div class="panel pad">
-            <h3>Research Inputs</h3>
+            <h3>Top Line Inputs</h3>
             <div class="grid">
               <div class="field"><label>Research question</label><textarea id="researchQuestion" rows="5">Give me the top-line read: what this company does, why the stock matters now, biggest bull case, biggest bear case, biggest risk, and what to watch next.</textarea></div>
               <div class="toolbar">
@@ -481,6 +483,7 @@ function renderDashboard(){
   const actions=state.notes.filter(n=>(n.type==="Next Action" || n.type==="To Do") && !n.done).sort(sortByDate).slice(0,5);
   $("nextActionList").innerHTML=actions.length ? actions.map(n=>`<li><div class="statusline"><b>${n.ticker}</b><span class="pill neutral">${n.type}</span>${n.dueDate ? `<span>Due ${n.dueDate}</span>` : ""}<button class="btn small" data-open-note="${n.id}">Open</button></div><div style="margin-top:6px">${escapeHtml(n.text)}</div></li>`).join("") : `<li>No actions due.</li>`;
   renderSnapshot();
+  renderFrontSection("technicals", false);
 }
 function renderSnapshot(){
   const s=state.snapshot;
@@ -508,6 +511,50 @@ function renderSnapshot(){
     rows.push(["Put/call vol", s.options.putCallVolumeRatio !== null ? Number(s.options.putCallVolumeRatio).toFixed(2) : "N/A"]);
   }
   $("technicalList").innerHTML=rows.map(([k,v])=>`<li><b>${k}:</b> ${v}</li>`).join("");
+}
+function renderFrontSection(kind, announce=true){
+  const s=state.snapshot;
+  const c=context();
+  const fallback=`Run Top Line to fill this section for ${c.ticker}.`;
+  let title="Technicals", lines=[];
+  if(kind==="fundamentals"){
+    title="Fundamentals";
+    lines=[
+      ["Company", c.company],
+      ["Market cap", s?.snapshot?.marketCap || "N/A"],
+      ["P/E", s?.snapshot?.peRatio || "N/A"],
+      ["Analyst target", s?.snapshot?.analystTarget ? `$${Number(s.snapshot.analystTarget).toFixed(2)}` : "N/A"],
+      ["Research note", fallback]
+    ];
+  } else if(kind==="risks"){
+    title="Risks";
+    lines=[
+      ["Risk note", "Use Top Line or Deep Dive to generate the current risk read."],
+      ["Beta", s?.snapshot?.beta || "N/A"],
+      ["RSI", s?.technical?.rsi14 ? Number(s.technical.rsi14).toFixed(1) : "N/A"],
+      ["Technical risk", s?.technical?.rsi14 > 70 ? "RSI is elevated." : "No elevated RSI flag."]
+    ];
+  } else if(kind==="earnings"){
+    title="Earnings";
+    lines=[
+      ["Earnings note", "Use Top Line or the Earnings focus in Research for the written earnings read."],
+      ["Recent changes", "Saved research briefs will provide the narrative here."],
+      ["News feed", "Use Pull Feed with keyword earnings."]
+    ];
+  } else {
+    title="Technicals";
+    lines=[
+      ["Price", s?.snapshot?.price ? `$${Number(s.snapshot.price).toFixed(2)}` : "N/A"],
+      ["Trend", s?.technical?.trend || "N/A"],
+      ["Price comment", s?.technical?.priceVs50 !== null && s?.technical?.priceVs50 !== undefined ? `${c.ticker} is ${s.technical.priceVs50.toFixed(1)}% vs the 50-day SMA.` : "N/A"],
+      ["Trend comment", s?.technical?.priceVs200 !== null && s?.technical?.priceVs200 !== undefined ? `${c.ticker} is ${s.technical.priceVs200.toFixed(1)}% vs the 200-day SMA.` : "N/A"],
+      ["50-day SMA", s?.technical?.sma50 ? `$${Number(s.technical.sma50).toFixed(2)}` : "N/A"],
+      ["200-day SMA", s?.technical?.sma200 ? `$${Number(s.technical.sma200).toFixed(2)}` : "N/A"],
+      ["RSI 14", s?.technical?.rsi14 ? Number(s.technical.rsi14).toFixed(1) : "N/A"]
+    ];
+  }
+  $("frontSectionOutput").innerHTML=`<div class="brief-section"><h4>${title}</h4><ul>${lines.map(([k,v])=>`<li><b>${k}:</b> ${escapeHtml(v)}</li>`).join("")}</ul></div>`;
+  if(announce) toast(title);
 }
 function renderWatchlist(){
   $("watchRows").innerHTML=state.watchlist.length ? state.watchlist.map(w=>`<tr><td class="mono">${w.ticker}</td><td>${escapeHtml(w.company)}</td><td>${w.category}</td><td>${w.bias}</td><td>${w.priority}</td><td>${escapeHtml(w.next)}</td><td>${escapeHtml(w.notes)}</td><td><button class="btn small red" data-del-watch="${w.id}">Delete</button></td></tr>`).join("") : `<tr><td colspan="8" class="empty">No saved tickers yet.</td></tr>`;
@@ -596,6 +643,7 @@ document.addEventListener("click",e=>{
   const sf=e.target.closest("[data-save-feed]"); if(sf){ const item=state.feed.find(x=>String(x.id)===sf.dataset.saveFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
   const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + (item.url ? "\nLink: " + item.url : "") + "\nWhy it matters: " + (item.why || item.summary || "")); }
   const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
+  const fs=e.target.closest("[data-front-section]"); if(fs) renderFrontSection(fs.dataset.frontSection);
 });
 $("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch; $("runResearchCard").onclick=runResearch;
 $("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
