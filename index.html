@@ -35,7 +35,7 @@
     .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:6px;padding:8px 11px;min-height:34px;display:inline-flex;gap:7px;align-items:center;justify-content:center;white-space:nowrap;box-shadow:0 1px 0 rgba(17,20,24,.03)}
     .btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.green{background:var(--green);border-color:var(--green);color:white}.btn.red{background:var(--red);border-color:var(--red);color:white}.btn.small{min-height:28px;padding:5px 9px;font-size:12px}
     .content{padding:20px}.tab{display:none}.tab.active{display:block}.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}.head h2{margin:0;font-size:24px}.sub{color:var(--muted);margin-top:4px;max-width:880px}
-    .content{max-width:1680px;margin:0 auto;width:100%}.grid{display:grid;gap:14px}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}.split{grid-template-columns:390px 1fr}.dashgrid{grid-template-columns:minmax(0,1.9fr) minmax(360px,1fr)}
+    .content{max-width:1680px;margin:0 auto;width:100%}.grid{display:grid;gap:14px}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}.split{grid-template-columns:390px 1fr}.dashgrid{grid-template-columns:minmax(0,1.9fr) minmax(360px,1fr);align-items:start}
     .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}.pad{padding:14px}.panel h3{font-size:15px;margin:0 0 10px}
     .metric span{display:block;color:var(--muted);font-size:12px}.metric b{display:block;margin-top:4px;font-size:18px}
     .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800}.bull{color:var(--green);background:var(--soft-green)}.bear{color:var(--red);background:var(--soft-red)}.warn{color:var(--gold);background:var(--soft-gold)}.neutral{color:#555;background:#eee}
@@ -43,7 +43,7 @@
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.list li{border:1px solid var(--line2);background:#fbfcfa;border-radius:6px;padding:9px}
     .promptbox{width:100%;min-height:260px}.brief{min-height:150px;white-space:pre-wrap;border:1px solid var(--line);border-radius:6px;background:#fbfcfa;padding:12px;line-height:1.5}.brief.formatted{white-space:normal}.brief-section{border:1px solid var(--line2);border-radius:6px;background:#fff;margin:0 0 10px;padding:10px}.brief-section h4{margin:0 0 6px;font-size:14px}.brief-section p{margin:0 0 6px}.brief-section ul{margin:6px 0 0 18px;padding:0}
     .statusline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.toast{position:fixed;right:18px;bottom:18px;background:#111418;color:white;padding:11px 13px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:5}.toast.show{opacity:1;transform:translateY(0)}
-    .quickcard{border:1px solid var(--line2);background:#fbfcfa;border-radius:6px;padding:10px}.quickcard b{display:block;margin-bottom:4px}.compactbox{min-height:220px;max-height:330px;overflow:auto}.frontfeed{min-height:260px}.empty{color:var(--muted);padding:18px;text-align:center}.danger{color:var(--red);font-weight:800}.loading{position:relative;overflow:hidden}.loading:after{content:"";position:absolute;left:-40%;top:0;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(23,57,95,.12),transparent);animation:sweep 1.1s infinite}@keyframes sweep{to{left:100%}}
+    .quickcard{border:1px solid var(--line2);background:#fbfcfa;border-radius:6px;padding:10px;display:grid;gap:8px;align-content:start}.quickcard b{display:block}.compactbox{min-height:220px;max-height:330px;overflow:auto}.frontfeed{min-height:260px}.empty{color:var(--muted);padding:18px;text-align:center}.danger{color:var(--red);font-weight:800}.loading{position:relative;overflow:hidden}.loading:after{content:"";position:absolute;left:-40%;top:0;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(23,57,95,.12),transparent);animation:sweep 1.1s infinite}@keyframes sweep{to{left:100%}}
     @media(max-width:1050px){.app{grid-template-columns:1fr}.side{position:sticky;top:0;z-index:4;display:block;padding:10px}.brand,.sidefoot,.navtitle{display:none}.nav{display:flex;overflow:auto}.nav button{white-space:nowrap}.top{height:auto;flex-wrap:wrap}.content{padding:14px}.cols2,.cols3,.cols4,.split,.dashgrid{grid-template-columns:1fr}.company{width:180px}}
   </style>
 </head>
@@ -95,9 +95,9 @@
             <div class="panel pad">
               <h3>Quick Actions</h3>
               <div class="grid cols3">
-                <div class="quickcard"><b>Top Line</b><span>One-click AI research brief.</span></div>
-                <div class="quickcard"><b>Deep Dive</b><span>Full prompt pack for serious research.</span></div>
-                <div class="quickcard"><b>Feed Pull</b><span>Live headlines with source links.</span></div>
+                <div class="quickcard"><b>Top Line</b><span>One-click AI research brief.</span><button class="btn primary" id="runResearchCard">Run Top Line</button></div>
+                <div class="quickcard"><b>Deep Dive</b><span>Full prompt pack for serious research.</span><button class="btn" id="topDeepDiveCard">Build Deep Dive</button></div>
+                <div class="quickcard"><b>Feed Pull</b><span>Live headlines with source links.</span><button class="btn green" id="pullFeedCard">Pull Feed</button></div>
               </div>
             </div>
             <div class="panel pad"><h3>Latest Research Brief</h3><div class="brief formatted" id="latestBrief">Run research or generate a deep dive prompt.</div></div>
@@ -597,11 +597,13 @@ document.addEventListener("click",e=>{
   const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + (item.url ? "\nLink: " + item.url : "") + "\nWhy it matters: " + (item.why || item.summary || "")); }
   const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
 });
-$("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch;
+$("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch; $("runResearchCard").onclick=runResearch;
 $("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
+$("topDeepDiveCard").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("addWatchMany").onclick=addWatchTickers; $("saveNote").onclick=()=>saveNote(); $("newNote").onclick=()=>resetNoteForm(); $("pullSample").onclick=pullSampleFeed;
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
 $("pullFrontFeed").onclick=pullLiveFrontFeed;
+$("pullFeedCard").onclick=pullLiveFrontFeed;
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("openDeepChatGPT").onclick=()=>openChatGPT($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("saveDeepPrompt").onclick=()=>savePrompt($("deepPrompt").value || buildPrompt("Full Deep Dive"));
