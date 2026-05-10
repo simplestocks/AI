@@ -343,7 +343,7 @@ function shortcutContext(){
 }
 function shortcutUrls(){
   const c=shortcutContext();
-  const xQuery=c.query.replace(/\b([A-Z]{1,6})\b/g, (m)=>m.startsWith("$") ? m : `$${m}`);
+  const xQuery=c.query;
   return {
     x: { label:"X Search", url:`https://x.com/search?q=${encodeURIComponent(xQuery)}&src=typed_query&f=live`, note:"Live X search for the query." },
     yahoo: { label:"Yahoo Finance", url:`https://finance.yahoo.com/quote/${encodeURIComponent(c.ticker)}/`, note:"Ticker quote, news, financials, analysis." },
