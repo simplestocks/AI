@@ -129,23 +129,28 @@
       </section>
 
       <section class="tab" id="research">
-        <div class="head"><div><h2>Research</h2><div class="sub">Top-line research controls and output.</div></div><button class="btn primary" id="runResearch2">Top Line</button></div>
-        <div class="grid cols2">
+        <div class="head"><div><h2>Research Shortcuts</h2><div class="sub">Build one search query and open it in free tools your students already know.</div></div></div>
+        <div class="grid">
           <div class="panel pad">
-            <h3>Top Line Inputs</h3>
+            <h3>Search Builder</h3>
             <div class="grid">
-              <div class="field"><label>Research question</label><textarea id="researchQuestion" rows="5">Give me the top-line read: what this company does, why the stock matters now, biggest bull case, biggest bear case, biggest risk, and what to watch next.</textarea></div>
+              <div class="grid cols3">
+                <div class="field"><label>Main ticker / keyword</label><input id="shortcutMain" value="AAPL" placeholder="AAPL or AI chips"></div>
+                <div class="field"><label>Join</label><select id="shortcutJoin"><option>AND</option><option>OR</option><option>NOT</option></select></div>
+                <div class="field"><label>Second word optional</label><input id="shortcutSecond" value="earnings" placeholder="earnings, lawsuit, guidance"></div>
+              </div>
+              <div class="field"><label>Extra words optional</label><input id="shortcutExtra" value="" placeholder="China, AI, CEO, margins"></div>
               <div class="toolbar">
-                <button class="btn small" data-action="preset" data-kind="fundamentals">Fundamentals</button>
-                <button class="btn small" data-action="preset" data-kind="risks">Risks</button>
-                <button class="btn small" data-action="preset" data-kind="competitors">Competitors</button>
-                <button class="btn small" data-action="preset" data-kind="earnings">Earnings</button>
+                <button class="btn primary" data-open-shortcut="x">X Search</button>
+                <button class="btn" data-open-shortcut="yahoo">Yahoo Finance</button>
+                <button class="btn" data-open-shortcut="finviz">Finviz</button>
+                <button class="btn green" id="buildShortcutLinks">Build Links</button>
               </div>
             </div>
           </div>
           <div class="panel pad">
-            <h3>Research Output</h3>
-            <div class="brief formatted" id="researchOutput">No research run yet.</div>
+            <h3>Generated Links</h3>
+            <ul class="list" id="shortcutLinks"></ul>
           </div>
         </div>
       </section>
@@ -300,10 +305,8 @@ function setLoading(on, msg){
     $("apiStatus").textContent=msg || "Working";
     $("apiStatus").className="pill warn";
     $("latestBrief").classList.add("loading");
-    $("researchOutput").classList.add("loading");
   } else {
     $("latestBrief").classList.remove("loading");
-    $("researchOutput").classList.remove("loading");
     if(loadingTimer) clearInterval(loadingTimer);
     loadingTimer=null;
   }
@@ -329,22 +332,52 @@ function buildPrompt(kind){
 }
 async function copyText(text){ try { await navigator.clipboard.writeText(text); toast("Copied"); } catch(_) { toast("Copy blocked by browser"); } }
 function openChatGPT(text){ window.open("https://chatgpt.com/?q=" + encodeURIComponent(text), "_blank"); }
+function shortcutContext(){
+  const main=($("shortcutMain")?.value || $("ticker").value || "").trim();
+  const join=($("shortcutJoin")?.value || "AND").trim();
+  const second=($("shortcutSecond")?.value || "").trim();
+  const extra=($("shortcutExtra")?.value || "").trim();
+  let query=main;
+  if(second){
+    if(join==="NOT") query=`${main} -${second}`;
+    else query=`${main} ${join} ${second}`;
+  }
+  if(extra) query=`${query} ${extra}`;
+  const ticker=(main.match(/[A-Za-z.]{1,8}/)?.[0] || $("ticker").value || "").toUpperCase();
+  return { main, join, second, extra, query: query.trim(), ticker };
+}
+function shortcutUrls(){
+  const c=shortcutContext();
+  const xQuery=c.query.replace(/\b([A-Z]{1,6})\b/g, (m)=>m.startsWith("$") ? m : `$${m}`);
+  return {
+    x: { label:"X Search", url:`https://x.com/search?q=${encodeURIComponent(xQuery)}&src=typed_query&f=live`, note:"Live X search for the query." },
+    yahoo: { label:"Yahoo Finance", url:`https://finance.yahoo.com/quote/${encodeURIComponent(c.ticker)}/`, note:"Ticker quote, news, financials, analysis." },
+    finviz: { label:"Finviz", url:`https://finviz.com/quote.ashx?t=${encodeURIComponent(c.ticker)}`, note:"Charts, news, valuation, ownership, technical snapshot." }
+  };
+}
+function buildShortcutLinks(){
+  const urls=shortcutUrls();
+  $("shortcutLinks").innerHTML=Object.values(urls).map(item=>`<li><div class="statusline"><b>${item.label}</b><a href="${item.url}" target="_blank" rel="noopener">Open</a></div><div class="sub">${escapeHtml(item.note)}</div><div class="mono" style="margin-top:6px">${escapeHtml(item.url)}</div></li>`).join("");
+}
+function openShortcut(site){
+  const item=shortcutUrls()[site];
+  if(!item?.url) return;
+  buildShortcutLinks();
+  window.open(item.url, "_blank", "noopener,noreferrer");
+}
 async function runResearch(){
   if(researchBusy){ toast("Already working"); return; }
   const c=context();
-  const out=$("researchOutput");
   const endpoint=$("researchEndpoint").value.trim();
   const stages=["Working on " + c.ticker,"Pulling Alpha Vantage data","Sending brief to Claude","Formatting result"];
   let stage=0;
   setLoading(true, stages[0]);
-  out.textContent=stages[0] + "...";
   $("latestBrief").textContent=stages[0] + "...";
-  loadingTimer=setInterval(()=>{ stage=Math.min(stage+1,stages.length-1); $("apiStatus").textContent=stages[stage]; out.textContent=stages[stage] + "..."; $("latestBrief").textContent=stages[stage] + "..."; }, 1800);
+  loadingTimer=setInterval(()=>{ stage=Math.min(stage+1,stages.length-1); $("apiStatus").textContent=stages[stage]; $("latestBrief").textContent=stages[stage] + "..."; }, 1800);
   try{
     const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ticker:c.ticker,question:$("researchQuestion").value})});
     const data=await res.json();
     const text=data.research && data.research !== "Analysis failed" ? data.research : "Research endpoint responded, but AI analysis failed. Backend env/API config needs repair before this becomes live AI output.";
-    setHtml("researchOutput", text);
     state.latestBrief=text;
     const last=state.notes[0];
     if(!(last && last.ticker===c.ticker && last.type==="Research" && last.text===text)){
@@ -354,7 +387,7 @@ async function runResearch(){
     $("apiStatus").textContent=data.research === "Analysis failed" ? "API needs config" : "API live";
     $("apiStatus").className=data.research === "Analysis failed" ? "pill warn" : "pill bull";
   }catch(err){
-    out.textContent="Research failed: " + err.message;
+    $("latestBrief").textContent="Research failed: " + err.message;
     $("apiStatus").textContent="API failed";
     $("apiStatus").className="pill bear";
   } finally {
@@ -642,16 +675,17 @@ document.addEventListener("click",e=>{
   const ds=e.target.closest("[data-del-source]"); if(ds){ state.sources=state.sources.filter(x=>String(x.id)!==ds.dataset.delSource); saveState(); }
   const sf=e.target.closest("[data-save-feed]"); if(sf){ const item=state.feed.find(x=>String(x.id)===sf.dataset.saveFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + "\nWhy it matters: " + item.why); }
   const sff=e.target.closest("[data-save-front-feed]"); if(sff){ const item=state.frontFeed.find(x=>String(x.id)===sff.dataset.saveFrontFeed); if(item) saveNote("Headline", item.source + ": " + item.headline + (item.url ? "\nLink: " + item.url : "") + "\nWhy it matters: " + (item.why || item.summary || "")); }
-  const preset=e.target.closest("[data-action='preset']"); if(preset){ $("researchQuestion").value={fundamentals:"Summarize the business, revenue drivers, margins, valuation, and balance-sheet risks.",risks:"Find the biggest current risks, hidden risks, and what would break the thesis.",competitors:"Compare this company to direct and indirect competitors. Rank where it wins and loses.",earnings:"Summarize the latest earnings tone, guidance, analyst reaction, and what changed."}[preset.dataset.kind]; }
+  const shortcut=e.target.closest("[data-open-shortcut]"); if(shortcut) openShortcut(shortcut.dataset.openShortcut);
   const fs=e.target.closest("[data-front-section]"); if(fs) renderFrontSection(fs.dataset.frontSection);
 });
-$("runResearch").onclick=runResearch; $("runResearch2").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch; $("runResearchCard").onclick=runResearch;
+$("runResearch").onclick=runResearch; $("testResearchEndpoint").onclick=runResearch; $("runResearchCard").onclick=runResearch;
 $("topDeepDive").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("topDeepDiveCard").onclick=()=>{ document.querySelector("[data-tab='deepdive']").click(); buildPrompt("Full Deep Dive"); };
 $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("addWatchMany").onclick=addWatchTickers; $("saveNote").onclick=()=>saveNote(); $("newNote").onclick=()=>resetNoteForm(); $("pullSample").onclick=pullSampleFeed;
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
 $("pullFrontFeed").onclick=pullLiveFrontFeed;
 $("pullFeedCard").onclick=pullLiveFrontFeed;
+$("buildShortcutLinks").onclick=buildShortcutLinks;
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("openDeepChatGPT").onclick=()=>openChatGPT($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("saveDeepPrompt").onclick=()=>savePrompt($("deepPrompt").value || buildPrompt("Full Deep Dive"));
@@ -666,6 +700,7 @@ $("ticker").addEventListener("change",loadMarketSnapshot);
 $("company").addEventListener("input",renderDashboard);
 buildPrompt("Top Line");
 renderAll();
+buildShortcutLinks();
 loadMarketSnapshot();
 </script>
 </body>
