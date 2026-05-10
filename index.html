@@ -350,10 +350,6 @@ function shortcutUrls(){
     finviz: { label:"Finviz", url:`https://finviz.com/quote.ashx?t=${encodeURIComponent(c.ticker)}`, note:"Charts, news, valuation, ownership, technical snapshot." }
   };
 }
-function buildShortcutLinks(){
-  const urls=shortcutUrls();
-  return Object.values(urls).map(item=>item.url);
-}
 function openShortcut(site){
   const item=shortcutUrls()[site];
   if(!item?.url) return;
