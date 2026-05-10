@@ -141,16 +141,11 @@
               </div>
               <div class="field"><label>Extra words optional</label><input id="shortcutExtra" value="" placeholder="China, AI, CEO, margins"></div>
               <div class="toolbar">
-                <button class="btn primary" data-open-shortcut="x">X Search</button>
+                <button class="btn" data-open-shortcut="x">X Search</button>
                 <button class="btn" data-open-shortcut="yahoo">Yahoo Finance</button>
                 <button class="btn" data-open-shortcut="finviz">Finviz</button>
-                <button class="btn green" id="buildShortcutLinks">Build Links</button>
               </div>
             </div>
-          </div>
-          <div class="panel pad">
-            <h3>Generated Links</h3>
-            <ul class="list" id="shortcutLinks"></ul>
           </div>
         </div>
       </section>
@@ -357,12 +352,11 @@ function shortcutUrls(){
 }
 function buildShortcutLinks(){
   const urls=shortcutUrls();
-  $("shortcutLinks").innerHTML=Object.values(urls).map(item=>`<li><div class="statusline"><b>${item.label}</b><a href="${item.url}" target="_blank" rel="noopener">Open</a></div><div class="sub">${escapeHtml(item.note)}</div><div class="mono" style="margin-top:6px">${escapeHtml(item.url)}</div></li>`).join("");
+  return Object.values(urls).map(item=>item.url);
 }
 function openShortcut(site){
   const item=shortcutUrls()[site];
   if(!item?.url) return;
-  buildShortcutLinks();
   window.open(item.url, "_blank", "noopener,noreferrer");
 }
 async function runResearch(){
@@ -685,7 +679,6 @@ $("saveTicker").onclick=addWatch; $("addWatch").onclick=addWatch; $("addWatchMan
 $("saveSource").onclick=()=>{ state.sources.unshift({id:Date.now(),source:$("sourceType").value,keyword:$("keyword").value}); saveState(); toast("Source rule saved"); };
 $("pullFrontFeed").onclick=pullLiveFrontFeed;
 $("pullFeedCard").onclick=pullLiveFrontFeed;
-$("buildShortcutLinks").onclick=buildShortcutLinks;
 $("copyDeepPrompt").onclick=()=>copyText($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("openDeepChatGPT").onclick=()=>openChatGPT($("deepPrompt").value || buildPrompt("Full Deep Dive"));
 $("saveDeepPrompt").onclick=()=>savePrompt($("deepPrompt").value || buildPrompt("Full Deep Dive"));
@@ -700,7 +693,6 @@ $("ticker").addEventListener("change",loadMarketSnapshot);
 $("company").addEventListener("input",renderDashboard);
 buildPrompt("Top Line");
 renderAll();
-buildShortcutLinks();
 loadMarketSnapshot();
 </script>
 </body>
